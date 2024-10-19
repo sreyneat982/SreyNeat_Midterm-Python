@@ -1,0 +1,223 @@
+{% extends "admin/layout/layout.html" %}
+
+<!-- ============================================================== -->
+<!-- Start Page Content here -->
+<!-- ============================================================== -->
+{% block page_content %}
+
+    <main class="p-6" id="app">
+        {{ super() }}
+
+        <div class="card">
+            <div class="p-6">
+                <div class="overflow-hidden">
+
+                    <div v-if="showOverlay"
+                         v-cloak
+                         class="transition-all fixed inset-0 z-40 bg-gray-900 bg-opacity-50 dark:bg-opacity-80"
+                         data-fc-overlay-backdrop=""></div>
+
+                    <h3 class="card-title mb-4">All Categories</h3>
+
+                    <div v-if="showSuccessMessage"
+                         v-cloak
+                         class="bg-success/10 text-success border border-success/20 text-sm rounded-md py-3 px-5 mb-2 flex justify-between items-center"
+                         role="alert">
+                        <div>
+                            <span class="font-bold">Success</span> - [[ successMessage ]]
+                        </div>
+                        <button @click="closeSuccessMessage" class="text-success font-bold ml-4">
+                            <i class="ri-close-line"></i>
+                        </button>
+                    </div>
+
+                    <div class="relative">
+
+                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            <thead>
+                            <tr class="bg-slate-100 dark:bg-slate-700">
+                                <th class="font-semibold px-4 py-4 text-slate-900 dark:text-slate-200 text-start">
+                                    Category Name
+                                </th>
+                                <th class="font-semibold px-4 py-4 text-slate-900 dark:text-slate-200 text-start">
+                                    Description
+                                </th>
+                                <th class="font-semibold px-4 py-4 text-slate-900 dark:text-slate-200 text-start text-center">
+                                    Action
+                                </th>
+                            </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                            <tr v-for="category in categories" :key="category.id" v-cloak>
+                                <th scope="row"
+                                    class="px-4 py-4 text-gray-900 whitespace-nowrap dark:text-white text-start">
+                                    [[ category.name ]]
+                                </th>
+                                <td class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-500 dark:text-gray-200">
+                                    [[ category.description ]]
+                                </td>
+                                <td class="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-500 dark:text-gray-200">
+                                    <a :href="'{{ url_for('edit_category', id='') }}' + category.id">
+                                        <i class="ri-edit-line text-xl p-1 text-primary" aria-label="Edit category"></i>
+                                    </a>
+                                    <a @click="openModal(category.id)" href="javascript:void(0)">
+                                        <i class="ri-delete-bin-2-line text-xl p-1 text-danger"
+                                           aria-label="Delete category"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+
+                        <div v-if="loading" v-cloak
+                             class="mt-5 mb-5 flex justify-center items-center bg-white/75 dark:bg-gray-900/75 z-50">
+                            <div class="h-12 w-12">
+                                <span class="animate-ping inline-flex h-full w-full rounded-full bg-danger/75"></span>
+                            </div>
+                        </div>
+                        <div v-if="categories.length === 0 && loading ===false" v-cloak
+                             class="mt-5 flex justify-center items-center bg-white/75 dark:bg-gray-900/75 z-50">
+                            The list is empty
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div v-if="showDeleteModal"
+             v-cloak
+             class="flex items-center justify-center w-full h-full fixed top-0 left-0 z-50 transition-all duration-500 overflow-y-auto">
+            <div class="flex items-center justify-center h-full">
+                <div class="sm:max-w-lg mx-auto bg-white shadow-sm rounded dark:bg-gray-800 dark:border-gray-700">
+                    <div class="flex justify-between items-center py-2.5 px-4 bg-danger dark:border-gray-700">
+                        <h3 class="font-medium text-white text-lg">Confirm Deletion</h3>
+                        <button @click="closeDeleteModal"
+                                class="inline-flex flex-shrink-0 justify-center items-center h-8 w-8 dark:text-gray-200">
+                            <i class="ri-close-line text-2xl text-white"></i>
+                        </button>
+                    </div>
+                    <div class="p-4 overflow-y-auto">
+                        <p class="text-gray-800 dark:text-gray-200">Are you sure you want to delete this user?</p>
+                    </div>
+                    <div class="flex justify-end items-center gap-2 p-4 border-t dark:border-gray-700">
+                        <button @click="closeDeleteModal" class="btn bg-light text-gray-800 transition-all"
+                                type="button">
+                            Cancel
+                        </button>
+                        <button @click="confirmDelete" class="btn bg-danger text-white">Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <!-- Delete Modal -->
+
+
+{% endblock %}
+<!-- ============================================================== -->
+<!-- End Page content -->
+<!-- ============================================================== -->
+
+{% block customJs %}
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dropzone/5.9.3/min/dropzone.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+    <script>
+        const {createApp} = Vue;
+
+        createApp({
+            delimiters: ['[[', ']]'],
+            data() {
+                return {
+                    showSuccessMessage: false,
+                    showDeleteModal: false,
+                    userIdToDelete: null,
+                    showOverlay: false,
+                    successMessage: '',
+                    categories: [],
+                    loading: false
+
+                };
+            },
+            mounted() {
+                this.fetchUsers();
+                this.checkUrlParams();
+            },
+            methods: {
+                closeSuccessMessage() {
+                    this.showSuccessMessage = false;
+                },
+                fetchUsers() {
+                    this.loading = true;// Assuming the backend sends users data as an array
+
+                    axios.get('/admin/categoryGet')
+                        .then(response => {
+                            this.loading = false;// Assuming the backend sends users data as an array
+
+                            this.categories = response.data.categories;
+                        })
+                        .catch(error => {
+                            this.loading = false;// Assuming the backend sends users data as an array
+
+                            console.error('Error fetching users:', error);
+                        });
+                },
+                hideSuccessMessage() {
+                    this.showSuccessMessage = false; // Hide the success message
+                },
+                checkUrlParams() {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    console.log(urlParams.toString());
+
+                    if (urlParams.has('success-edit') && urlParams.get('success-edit') === 'true') {
+                        this.showSuccessMessage = true;
+                        this.successMessage = 'User updated successfully!';
+                        this.removeSuccessParam();
+                    } else if (urlParams.has('success-delete') && urlParams.get('success-delete') === 'true') {
+                        this.showSuccessMessage = true;
+                        this.successMessage = 'User deleted successfully!';
+                        this.removeSuccessParam();
+                    } else {
+                        console.log("No success parameter found");
+                    }
+                },
+                removeSuccessParam() {
+                    const url = new URL(window.location.href);
+                    url.searchParams.delete('success-edit');
+                    url.searchParams.delete('success-delete');
+                    window.history.replaceState({}, document.title, url);
+                },
+                openModal(userId) {
+                    this.userIdToDelete = userId;
+                    this.showDeleteModal = true;
+                    this.showOverlay = true; // Show the modal
+                },
+                closeDeleteModal() {
+                    this.showDeleteModal = false; // Hide the modal
+                    this.userIdToDelete = null;
+                    this.showOverlay = false; // Reset the user ID
+                },
+                confirmDelete() {
+                    if (this.userIdToDelete !== null) { // Use userIdToDelete here
+                        this.showOverlay = true; // Show overlay while processing
+
+                        // Send delete request to the server
+                        axios.post('/admin/category/delete', {id: this.userIdToDelete}) // Ensure you're sending the right ID
+                            .then(response => {
+                                // Handle successful deletion
+                                this.categories = this.categories.filter(category => category.id !== this.userIdToDelete);
+                                this.showSuccessMessage = true;
+                                this.successMessage = 'Category deleted successfully!';
+                                this.closeDeleteModal(); // Close the modal after deletion
+                            })
+                            .catch(error => {
+                                console.error('Error deleting category:', error.response.data.error);
+                                this.showOverlay = false; // Hide overlay in case of error
+                            });
+                    }
+                }
+            },
+        }).mount('#app');
+    </script>
+{% endblock %}
